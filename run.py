@@ -684,94 +684,111 @@ def main():
         st.session_state.activated = True
     
     if not st.session_state.activated:
-        # 语言切换按钮
-        col_lang = st.columns([4, 1])[1]
-        with col_lang:
-            if st.button("🌐 中文/EN", key="lang_toggle"):
-                st.session_state.language = "en" if st.session_state.language == "zh" else "zh"
-                st.rerun()
-        
+        # 激活页面 - 响应式设计
         st.markdown(f"""
-            <div style="text-align: center; padding: 60px 20px;">
-                <h1 style="color: #fff; font-size: 2rem; margin-bottom: 30px;">{get_text("activation_title")}</h1>
+            <style>
+                .activation-page {{
+                    min-height: 100vh;
+                    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+                    padding: 20px;
+                }}
+                @media (max-width: 480px) {{
+                    .activation-page {{
+                        padding: 10px;
+                    }}
+                }}
+            </style>
+            <div class="activation-page">
+        """, unsafe_allow_html=True)
+        
+        # 语言切换按钮 - 手机适配
+        col_lang = st.columns([3, 1])[1]
+        with col_lang:
+            st.button("🌐 中文/EN", key="lang_toggle", use_container_width=True)
+        
+        # 标题区域
+        st.markdown(f"""
+            <div style="text-align: center; padding: 40px 10px 20px;">
+                <h1 style="color: #fff; font-size: 1.8rem; margin-bottom: 20px;">{get_text("activation_title")}</h1>
             </div>
         """, unsafe_allow_html=True)
         
-        col_center = st.columns([1,2,1])[1]
-        with col_center:
-            st.markdown("""
-                <div style="background: rgba(255,255,255,0.08); border-radius: 16px; padding: 24px;">
-            """, unsafe_allow_html=True)
-            
-            st.markdown(f"""
-                <p style="color: #a0aec0; font-size: 0.9rem; margin-bottom: 8px;">{get_text("machine_code_label")}</p>
-            """, unsafe_allow_html=True)
-            st.code(machine_code, language="text")
-            
-            st.markdown(f"""
-                <p style="color: #a0aec0; font-size: 0.9rem; margin-bottom: 8px; margin-top: 20px;">{get_text("activation_code_label")}</p>
-            """, unsafe_allow_html=True)
-            activation_code = st.text_input("", placeholder=get_text("activation_code_placeholder"), max_chars=24, key="activation_input")
-            
-            if st.button(get_text("activate_button"), use_container_width=True):
-                if verify_activation_code(machine_code, activation_code.strip().upper()):
-                    # 激活成功，保存到数据库
-                    if activate_machine(machine_code, activation_code.strip().upper()):
-                        st.session_state.activated = True
-                        st.success(get_text("activation_success"))
-                        time.sleep(1)
-                        st.rerun()
-                    else:
-                        st.error("激活失败，请重试")
+        # 激活表单 - 全屏宽度（手机适配）
+        st.markdown("""
+            <div style="background: rgba(255,255,255,0.08); border-radius: 16px; padding: 20px; margin-bottom: 20px;">
+        """, unsafe_allow_html=True)
+        
+        # 机器码
+        st.markdown(f"""
+            <p style="color: #a0aec0; font-size: 0.9rem; margin-bottom: 8px;">{get_text("machine_code_label")}</p>
+        """, unsafe_allow_html=True)
+        st.code(machine_code, language="text")
+        
+        # 激活码输入
+        st.markdown(f"""
+            <p style="color: #a0aec0; font-size: 0.9rem; margin-bottom: 8px; margin-top: 20px;">{get_text("activation_code_label")}</p>
+        """, unsafe_allow_html=True)
+        activation_code = st.text_input("", placeholder=get_text("activation_code_placeholder"), max_chars=24, key="activation_input")
+        
+        # 激活按钮
+        if st.button(get_text("activate_button"), use_container_width=True):
+            if verify_activation_code(machine_code, activation_code.strip().upper()):
+                # 激活成功，保存到数据库
+                if activate_machine(machine_code, activation_code.strip().upper()):
+                    st.session_state.activated = True
+                    st.success(get_text("activation_success"))
+                    time.sleep(1)
+                    st.rerun()
                 else:
-                    st.error(get_text("activation_error"))
-            
-            st.markdown(f"""
-                <p style="color: #63b3ed; font-size: 0.85rem; margin-top: 16px;">{get_text("activation_hint")}</p>
-            """, unsafe_allow_html=True)
-            
-            st.markdown("</div>", unsafe_allow_html=True)
+                    st.error("激活失败，请重试")
+            else:
+                st.error(get_text("activation_error"))
+        
+        # 提示信息
+        st.markdown(f"""
+            <p style="color: #63b3ed; font-size: 0.85rem; margin-top: 16px; text-align: center;">{get_text("activation_hint")}</p>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("</div></div>", unsafe_allow_html=True)
         
         return
     
-    # 语言切换按钮
-    col_lang = st.columns([4, 1])[1]
+    # 语言切换按钮 - 手机适配
+    col_lang = st.columns([3, 1])[1]
     with col_lang:
-        if st.button("🌐 中文/EN", key="lang_toggle_main"):
-            st.session_state.language = "en" if st.session_state.language == "zh" else "zh"
-            st.rerun()
+        st.button("🌐 中文/EN", key="lang_toggle_main", use_container_width=True)
     
-    # 头部标题区域
+    # 头部标题区域 - 响应式设计
     st.markdown(f"""
-        <div style="text-align: center; padding: 40px 0;">
+        <div style="text-align: center; padding: 30px 10px 20px;">
             <h1 class="stTitle">{get_text("main_title")}</h1>
-            <p style="color: #a0aec0; font-size: 1.1rem; margin-top: 10px;">
+            <p style="color: #a0aec0; font-size: 1rem; margin-top: 10px;">
                 {get_text("subtitle_line1")}
             </p>
-            <p style="color: #63b3ed; font-size: 1rem; margin-top: 8px;">
+            <p style="color: #63b3ed; font-size: 0.9rem; margin-top: 8px;">
                 {get_text("subtitle_line2")}
             </p>
         </div>
     """, unsafe_allow_html=True)
 
-    # 功能介绍卡片
+    # 功能介绍卡片 - 响应式网格布局
     st.markdown(f"""
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-bottom: 30px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;">
             <div class="info-card">
                 <h4 style="color: #00cec9; margin-bottom: 8px;">{get_text("card1_title")}</h4>
-                <p style="color: #a0aec0; font-size: 0.9rem;">{get_text("card1_desc")}</p>
+                <p style="color: #a0aec0; font-size: 0.85rem;">{get_text("card1_desc")}</p>
             </div>
             <div class="info-card">
                 <h4 style="color: #00cec9; margin-bottom: 8px;">{get_text("card2_title")}</h4>
-                <p style="color: #a0aec0; font-size: 0.9rem;">{get_text("card2_desc")}</p>
+                <p style="color: #a0aec0; font-size: 0.85rem;">{get_text("card2_desc")}</p>
             </div>
             <div class="info-card">
                 <h4 style="color: #00cec9; margin-bottom: 8px;">{get_text("card3_title")}</h4>
-                <p style="color: #a0aec0; font-size: 0.9rem;">{get_text("card3_desc")}</p>
+                <p style="color: #a0aec0; font-size: 0.85rem;">{get_text("card3_desc")}</p>
             </div>
             <div class="info-card">
                 <h4 style="color: #00cec9; margin-bottom: 8px;">{get_text("card4_title")}</h4>
-                <p style="color: #a0aec0; font-size: 0.9rem;">{get_text("card4_desc")}</p>
+                <p style="color: #a0aec0; font-size: 0.85rem;">{get_text("card4_desc")}</p>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -881,11 +898,14 @@ def main():
                 adf = st.session_state.analysis_df
             
             st.markdown(f"""
-                <div style="margin-top: 24px;">
-                    <h3 style="color: #fff; margin-bottom: 16px;">{get_text("analysis_table_title")}</h3>
+                <div style="margin-top: 20px;">
+                    <h3 style="color: #fff; margin-bottom: 12px; font-size: 1.1rem;">{get_text("analysis_table_title")}</h3>
                 </div>
             """, unsafe_allow_html=True)
-            st.markdown('<div class="dataframe-container">', unsafe_allow_html=True)
+            # 响应式表格容器 - 手机端支持水平滚动
+            st.markdown("""
+                <div class="dataframe-container" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+            """, unsafe_allow_html=True)
             st.dataframe(adf, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
             
