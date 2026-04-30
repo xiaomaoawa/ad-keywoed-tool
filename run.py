@@ -232,48 +232,91 @@ def get_hardware_id():
         return None
 
 def get_machine_code():
-    """获取机器唯一标识 - 使用浏览器指纹技术"""
-    # 检查URL参数中是否有client_id
-    query_params = st.query_params
-    client_id = None
-    
-    if 'client_id' in query_params:
-        client_id = query_params['client_id']
-    
-    # 如果URL中没有，尝试从session_state获取
-    if not client_id and 'client_id' in st.session_state:
-        client_id = st.session_state['client_id']
-    
-    # 如果还是没有，生成新的唯一ID
-    if not client_id:
-        # 使用UUID生成唯一客户端ID
-        client_id = f"CL{uuid.uuid4().hex[:20].upper()}"
-        st.session_state['client_id'] = client_id
-    
-    # 生成机器码（基于客户端ID）
-    machine_code = hashlib.md5(client_id.encode()).hexdigest().upper()[:16]
-    st.session_state['machine_code'] = machine_code
-    
-    # 输出JavaScript来持久化client_id到localStorage
-    js_code = f"""
+    """获取机器唯一标识 - 使用浏览器指纹技术 + localStorage持久化"""
+    # 首先输出JavaScript，确保它在Python代码之前执行
+    fingerprint_js = """
     <script>
-    // 持久化client_id到localStorage
-    var storedId = localStorage.getItem('ad_keyword_tool_client_id');
-    var currentId = '{client_id}';
+    // 生成浏览器指纹
+    function generateFingerprint() {
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        var txt = 'ad-keyword-tool-fingerprint';
+        ctx.textBaseline = 'top';
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#f60';
+        ctx.fillRect(125, 1, 62, 20);
+        ctx.fillStyle = '#069';
+        ctx.fillText(txt, 2, 15);
+        ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+        ctx.fillText(txt, 4, 17);
+        
+        var canvasFingerprint = canvas.toDataURL();
+        var userAgent = navigator.userAgent;
+        var screenResolution = screen.width + 'x' + screen.height;
+        var timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        var language = navigator.language;
+        
+        // 组合所有特征生成指纹
+        var fingerprint = canvasFingerprint + userAgent + screenResolution + timezone + language;
+        
+        // 简化指纹用于机器码
+        var hash = 0;
+        for (var i = 0; i < fingerprint.length; i++) {
+            var char = fingerprint.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return Math.abs(hash).toString(16).toUpperCase();
+    }
     
-    if (!storedId) {{
-        localStorage.setItem('ad_keyword_tool_client_id', currentId);
-    }} else if (storedId !== currentId) {{
-        // 如果localStorage中有不同的ID，使用存储的ID
-        localStorage.setItem('ad_keyword_tool_client_id', storedId);
-        // 重定向到使用存储ID的URL
-        window.location.href = window.location.origin + window.location.pathname + '?client_id=' + storedId;
-    }}
+    // 获取或创建客户端ID
+    function getOrCreateClientId() {
+        var storedId = localStorage.getItem('ad_keyword_tool_client_id');
+        if (!storedId) {
+            // 生成新的客户端ID
+            storedId = 'CL' + generateFingerprint().substring(0, 16);
+            localStorage.setItem('ad_keyword_tool_client_id', storedId);
+            localStorage.setItem('ad_keyword_tool_created', new Date().toISOString());
+        }
+        return storedId;
+    }
+    
+    // 立即执行重定向逻辑
+    (function() {
+        var clientId = getOrCreateClientId();
+        var currentUrl = window.location.href;
+        
+        // 检查URL中是否已有client_id
+        var urlParams = new URLSearchParams(window.location.search);
+        var existingClientId = urlParams.get('client_id');
+        
+        if (!existingClientId || existingClientId !== clientId) {
+            // 更新URL参数并刷新
+            urlParams.set('client_id', clientId);
+            var newUrl = window.location.origin + window.location.pathname + '?' + urlParams.toString();
+            window.location.replace(newUrl);
+        }
+    })();
     </script>
     """
-    st.components.v1.html(js_code, height=0)
     
-    return machine_code
+    # 输出JavaScript（这会立即执行并重定向）
+    st.markdown(fingerprint_js, unsafe_allow_html=True)
+    
+    # 从URL参数获取client_id
+    query_params = st.query_params
+    if 'client_id' in query_params:
+        client_id = query_params['client_id']
+        st.session_state['client_id'] = client_id
+        
+        # 生成机器码（基于客户端ID）
+        machine_code = hashlib.md5(client_id.encode()).hexdigest().upper()[:16]
+        st.session_state['machine_code'] = machine_code
+        return machine_code
+    
+    # 如果没有URL参数（首次加载），显示加载提示
+    st.write("正在识别设备...")
+    return "AWAITING_ID"
 
 def is_activated(machine_code):
     """检查是否已激活"""
@@ -768,7 +811,7 @@ def main():
         
         # 激活码输入
         st.markdown("""<p class="activation-label">请输入激活码</p>""", unsafe_allow_html=True)
-        activation_code = st.text_input("", placeholder="请输入24位激活码", max_chars=24, key="activation_input")
+        activation_code = st.text_input("激活码", placeholder="请输入24位激活码", max_chars=24, key="activation_input", label_visibility="hidden")
         
         # 激活按钮
         if st.button("激活软件", use_container_width=True):
