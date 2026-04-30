@@ -232,16 +232,47 @@ def get_hardware_id():
         return None
 
 def get_machine_code():
-    """获取机器唯一标识"""
-    hwid = get_hardware_id()
-    if hwid:
-        # 使用硬件ID生成机器码
-        machine_code = hashlib.md5(hwid.encode()).hexdigest().upper()[:16]
-    else:
-        # 备选方案：使用随机ID
-        machine_code = hashlib.md5(str(uuid.uuid4()).encode()).hexdigest().upper()[:16]
+    """获取机器唯一标识 - 使用浏览器指纹技术"""
+    # 检查URL参数中是否有client_id
+    query_params = st.query_params
+    client_id = None
     
+    if 'client_id' in query_params:
+        client_id = query_params['client_id']
+    
+    # 如果URL中没有，尝试从session_state获取
+    if not client_id and 'client_id' in st.session_state:
+        client_id = st.session_state['client_id']
+    
+    # 如果还是没有，生成新的唯一ID
+    if not client_id:
+        # 使用UUID生成唯一客户端ID
+        client_id = f"CL{uuid.uuid4().hex[:20].upper()}"
+        st.session_state['client_id'] = client_id
+    
+    # 生成机器码（基于客户端ID）
+    machine_code = hashlib.md5(client_id.encode()).hexdigest().upper()[:16]
     st.session_state['machine_code'] = machine_code
+    
+    # 输出JavaScript来持久化client_id到localStorage
+    js_code = f"""
+    <script>
+    // 持久化client_id到localStorage
+    var storedId = localStorage.getItem('ad_keyword_tool_client_id');
+    var currentId = '{client_id}';
+    
+    if (!storedId) {{
+        localStorage.setItem('ad_keyword_tool_client_id', currentId);
+    }} else if (storedId !== currentId) {{
+        // 如果localStorage中有不同的ID，使用存储的ID
+        localStorage.setItem('ad_keyword_tool_client_id', storedId);
+        // 重定向到使用存储ID的URL
+        window.location.href = window.location.origin + window.location.pathname + '?client_id=' + storedId;
+    }}
+    </script>
+    """
+    st.components.v1.html(js_code, height=0)
+    
     return machine_code
 
 def is_activated(machine_code):
@@ -672,12 +703,96 @@ def gen_outdoor_titles(main_word, city):
 
 # ====================== 主页面 ======================
 def main():
-    # ====================== 软件激活验证 (已禁用) ======================
-    # 获取机器码（用于后续可能的激活功能）
+    # ====================== 软件激活验证 ======================
+    if "activated" not in st.session_state:
+        st.session_state.activated = False
+    
+    # 获取机器码
     machine_code = get_machine_code()
     
-    # 直接进入主页面，跳过激活验证
-    st.session_state.activated = True
+    # 检查数据库中是否已激活
+    if is_activated(machine_code):
+        st.session_state.activated = True
+    
+    # 激活页面
+    if not st.session_state.activated:
+        # 激活页面样式
+        st.markdown("""
+            <style>
+                .activation-bg {
+                    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+                    min-height: 100vh;
+                    padding: 20px;
+                }
+                .activation-card {
+                    background: rgba(255,255,255,0.08);
+                    border-radius: 16px;
+                    padding: 24px;
+                    max-width: 400px;
+                    margin: 0 auto;
+                }
+                .activation-title {
+                    color: #fff;
+                    font-size: 1.5rem;
+                    text-align: center;
+                    margin-bottom: 24px;
+                }
+                .activation-label {
+                    color: #a0aec0;
+                    font-size: 0.9rem;
+                    margin-bottom: 8px;
+                }
+                .activation-input {
+                    border-radius: 10px;
+                    padding: 12px;
+                    width: 100%;
+                    background: rgba(255,255,255,0.1);
+                    border: 2px solid rgba(255,255,255,0.2);
+                    color: #fff;
+                }
+            </style>
+        """, unsafe_allow_html=True)
+        
+        # 激活页面内容
+        st.markdown("""<div class="activation-bg">""", unsafe_allow_html=True)
+        
+        # 标题
+        st.markdown("""<h1 class="activation-title">🔐 软件激活</h1>""", unsafe_allow_html=True)
+        
+        # 激活卡片
+        st.markdown("""<div class="activation-card">""", unsafe_allow_html=True)
+        
+        # 机器码显示
+        st.markdown("""<p class="activation-label">您的机器码</p>""", unsafe_allow_html=True)
+        st.code(machine_code, language="text")
+        
+        # 激活码输入
+        st.markdown("""<p class="activation-label">请输入激活码</p>""", unsafe_allow_html=True)
+        activation_code = st.text_input("", placeholder="请输入24位激活码", max_chars=24, key="activation_input")
+        
+        # 激活按钮
+        if st.button("激活软件", use_container_width=True):
+            if verify_activation_code(machine_code, activation_code.strip().upper()):
+                # 激活成功
+                if activate_machine(machine_code, activation_code.strip().upper()):
+                    st.session_state.activated = True
+                    st.success("✅ 激活成功！即将进入系统...")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("❌ 激活失败，请重试")
+            else:
+                st.error("❌ 激活码无效，请联系管理员获取")
+        
+        # 提示信息
+        st.markdown("""
+            <p style="color: #63b3ed; font-size: 0.85rem; margin-top: 16px; text-align: center;">
+                如需激活码，请联系扬州艾加广告有限公司
+            </p>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("</div></div>", unsafe_allow_html=True)
+        return
     
     # 语言切换按钮 - 手机适配
     col_lang = st.columns([3, 1])[1]
