@@ -296,7 +296,7 @@ DEMO_ACTIVATION_CODE = "5F5A6C3E8B2D9A1E4C7F0B3A6D9E2C5F"
 if "language" not in st.session_state:
     st.session_state.language = "zh"
 
-st.set_page_config(page_title=get_text("page_title"), layout="wide", page_icon="🏢")
+st.set_page_config(page_title=get_text("page_title"), layout="centered", page_icon="🏢")
 
 # ====================== 自定义CSS样式 ======================
 st.markdown("""
@@ -304,17 +304,18 @@ st.markdown("""
         .main {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             min-height: 100vh;
+            padding: 10px;
         }
         .stTitle {
             color: #fff !important;
-            font-size: 2.5rem !important;
+            font-size: 2rem !important;
             font-weight: 700 !important;
             text-align: center;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
         .stSubheader {
             color: #f0f0f0 !important;
-            font-size: 1.2rem !important;
+            font-size: 1.1rem !important;
         }
         .stTextInput > div > div > input {
             border-radius: 10px;
@@ -376,6 +377,56 @@ st.markdown("""
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+        }
+        /* 响应式设计 - 平板/小屏幕适配 */
+        @media (max-width: 768px) {
+            .main {
+                padding: 5px;
+            }
+            .stTitle {
+                font-size: 1.5rem !important;
+            }
+            .info-card {
+                padding: 15px;
+            }
+            .stButton > button {
+                padding: 10px 16px;
+                font-size: 0.9rem;
+            }
+            .dataframe-container {
+                padding: 10px;
+                overflow-x: auto;
+            }
+        }
+        /* 小屏幕手机适配 */
+        @media (max-width: 480px) {
+            .stTitle {
+                font-size: 1.3rem !important;
+            }
+            .info-card {
+                padding: 12px;
+                margin-bottom: 10px;
+            }
+            .stTextInput > div > div > input {
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+            .stButton > button {
+                padding: 8px 14px;
+                font-size: 0.85rem;
+            }
+        }
+        /* 超小屏幕适配 */
+        @media (max-width: 360px) {
+            .stTitle {
+                font-size: 1.1rem !important;
+            }
+            .info-card {
+                padding: 10px;
+            }
+            .footer {
+                padding: 12px;
+            }
         }
         .category-badge {
             display: inline-block;
@@ -727,24 +778,26 @@ def main():
 
     # 输入区域
     st.markdown(f"""
-        <div style="background: rgba(255,255,255,0.05); border-radius: 16px; padding: 24px; margin-bottom: 24px;">
-            <h3 style="color: #fff; margin-bottom: 20px;">{get_text("input_section_title")}</h3>
+        <div style="background: rgba(255,255,255,0.05); border-radius: 16px; padding: 16px; margin-bottom: 20px;">
+            <h3 style="color: #fff; margin-bottom: 16px; font-size: 1.1rem;">{get_text("input_section_title")}</h3>
     """, unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([2,1,1])
+    # 使用响应式布局 - 手机单列，桌面三列
+    col1, col2, col3 = st.columns([1,1,1], gap="small")
     with col1:
-        main_word = st.text_input(get_text("main_word_label"), value="", placeholder=get_text("main_word_placeholder"))
+        main_word = st.text_input(get_text("main_word_label"), value="", placeholder=get_text("main_word_placeholder"), label_visibility="visible")
     with col2:
-        city = st.text_input(get_text("city_label"), placeholder=get_text("city_placeholder"))
+        city = st.text_input(get_text("city_label"), placeholder=get_text("city_placeholder"), label_visibility="visible")
     with col3:
         sources = st.multiselect(
             get_text("source_label"),
             ["百度下拉", "百度相关", "抖音", "淘宝", "京东", "阿里巴巴"],
-            default=["百度下拉", "百度相关"]
+            default=["百度下拉", "百度相关"],
+            label_visibility="visible"
         )
 
-    # 按钮区域
-    c1, c2, c3 = st.columns([1,1,2])
+    # 按钮区域 - 响应式布局
+    c1, c2 = st.columns([1,1], gap="small")
     with c1:
         grab = st.button(get_text("grab_button"), use_container_width=True)
     with c2:
